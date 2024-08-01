@@ -1,15 +1,35 @@
-import random
-import telebot
 import sqlite3
-from telebot import types   # Библиотеки(можешь добавить)           
+import telebot
+from telebot import types
 
-TOKEN = "YOUR_CODE"    # Наш токен для работы бота
+TOKEN = "Your_Token"  # Замените на токен вашего бота
 bot = telebot.TeleBot(TOKEN)
 
-answers = ["Перепроверь ещё раз свой запрос"]   # Сообщение в случае неправильной комманды
+# Создание базы данных и таблицы
+def create_database():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# Добавление пользователя в базу данных
+def add_user(user_id):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT OR IGNORE INTO users (id) VALUES (?)', (user_id,))
+    conn.commit()
+    conn.close()
 
 
-@bot.message_handler(commands=["start"])    # User запускает бот
+answers = "Перепроверь ещё раз свой запрос"  # Сообщение в случае неправильной комманды
+
+
+@bot.message_handler(commands=["start"])
 def welcome(message):                       # Функция welcome и главные кнопки меню
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True) # Какая-то фишка для работы кнопок                
     button1 = types.KeyboardButton('Все фильмы')
@@ -20,12 +40,32 @@ def welcome(message):                       # Функция welcome и глав
     markup.row(button1, button2)            # Вывод кнопок на экран пользователю
     markup.row(button3, button4)
     markup.row(button5)
+    user_id = message.from_user.id
+    add_user(user_id)
 
     if message.text == '/start':
         # Отправляю приветственный текст
         bot.send_message(message.chat.id, f'Привет, {message.from_user.first_name}!\nМеня зовут ФИЛЬМОБОТ и я твой проводник в мир кино и сериалов :)\nДля начала выбери способ поиска фильма в меню ниже: ', reply_markup=markup)  # Приветственное сообщение пользователю, не забываем про markup
     else:
         bot.send_message(message.chat.id, 'Перекинул тебя в главное меню! Выбирай!', reply_markup=markup) # если пользователь по своему желанию зашёл в меню
+
+
+@bot.message_handler(commands=['users_admin'])
+def list_users(message):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id FROM users')
+    users = cursor.fetchall()
+    conn.close()
+
+    if users:
+        user_ids = "\n".join(str(user[0]) for user in users)
+        bot.send_message(message.chat.id, f"Сохраненные ID пользователей:\n{user_ids}")
+    else:
+        bot.send_message(message.chat.id, "Нет сохраненных пользователей.")
+
+
+
 
 @bot.message_handler(content_types='photo') # Если user прислал в бот фото
 def get_photo(message):
@@ -57,7 +97,6 @@ def info(message):
 
     elif message.text == '↩️ Назад в меню':
         welcome(message)
-
 
 def funcFilm(message):
     if message.text == '🔹 Фильм - 1':                          # Здесь добавляй всю инфу со всех кнопок
@@ -249,7 +288,7 @@ def tgkMethod(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button1 = types.KeyboardButton("↩️ Назад в меню")
     markup.row(button1)
-    bot.send_message(message.chat.id, 'Подпишись -> @...', reply_markup=markup)
+    bot.send_message(message.chat.id, 'Подпишись -> https://t.me/+DJTaOu_I6q9jMGVi', reply_markup=markup)
 
 
 def settings(message):  # Если хочешь, то дополни настройки
@@ -258,5 +297,10 @@ def settings(message):  # Если хочешь, то дополни настр�
     markup.row(button1)
     bot.send_message(message.chat.id, 'О проблемах писать -> @jansavitskiy', reply_markup=markup)
 
+def main():
+    create_database()
+    
+    # Запуск бота
+bot.polling(none_stop=True)
 
-bot.polling(none_stop = True) # Запускаем бота
+
