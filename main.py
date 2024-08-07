@@ -1,24 +1,19 @@
 import sqlite3
-import telebot
-from telebot import types
-import requests
+from telebot import TeleBot, types
 
+# Замените 'YOUR_BOT_TOKEN' на токен вашего бота
+bot = TeleBot('YOUR_TOKEN')
 
-TOKEN = "YOUR_TOKEN"  # Замените на токен вашего бота
-bot = telebot.TeleBot(TOKEN)
-
-
-# Создание базы данных и таблицы
 def create_database():
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY
-        )
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY
+    )
     ''')
     conn.commit()
-
+    conn.close()  # Закрываем соединение
 
 # Добавление пользователя в базу данных
 def add_user(user_id):
@@ -26,11 +21,9 @@ def add_user(user_id):
     cursor = conn.cursor()
     cursor.execute('INSERT OR IGNORE INTO users (id) VALUES (?)', (user_id,))
     conn.commit()
-    conn.close()
+    conn.close()  # Закрываем соединение
 
-
-answers = "Перепроверь ещё раз свой запрос"  # Сообщение в случае неправильной комманды
-
+answers = "Перепроверь ещё раз свой запрос"  # Сообщение в случае неправильной команды
 
 @bot.message_handler(commands=["start"])
 def welcome(message):                       # Функция welcome и главные кнопки меню
@@ -44,12 +37,7 @@ def welcome(message):                       # Функция welcome и глав
     user_id = message.from_user.id
     add_user(user_id)
 
-    if message.text == '/start':
-        # Отправляю приветственный текст
-        bot.send_message(message.chat.id, f'Привет, {message.from_user.first_name}!\nМеня зовут ФИЛЬМОБОТ и я твой проводник в мир кино и сериалов :)\nДля начала выбери способ поиска фильма в меню ниже: ', reply_markup=markup)  # Приветственное сообщение пользователю, не забываем про markup
-    else:
-        bot.send_message(message.chat.id, 'Перекинул тебя в главное меню! Выбирай!', reply_markup=markup) # если пользователь по своему желанию зашёл в меню
-
+    bot.send_message(message.chat.id, f'Привет, {message.from_user.first_name}!\nМеня зовут ФИЛЬМОБОТ и я твой проводник в мир кино и сериалов :)\nДля начала выбери способ поиска фильма в меню ниже: ', reply_markup=markup)
 
 @bot.message_handler(commands=['users_admin'])
 def list_users(message):
@@ -57,13 +45,9 @@ def list_users(message):
     cursor = conn.cursor()
     cursor.execute('SELECT id FROM users')
     users = cursor.fetchall()
-    conn.close()
-
-    if users:
-        user_ids = "\n".join(str(user[0]) for user in users)
-        bot.send_message(message.chat.id, f"Сохраненные ID пользователей:\n{user_ids}")
-    else:
-        bot.send_message(message.chat.id, "Нет сохраненных пользователей.")
+    conn.close()  # Закрываем соединение
+    user_ids = [str(user[0]) for user in users]
+    bot.send_message(message.chat.id, "Список пользователей:\n" + "\n".join(user_ids))
 
 
 @bot.message_handler()
@@ -76,7 +60,7 @@ def info(message):
     elif message.text == 'Настройки':
         settings(message)
     elif message.text == 'Поиск по жанрам':
-        bot.send_message(message.chat.id, "Введите жанр фильма:\nP.s вводите жанр правильно\nДоступные жанры: Драма, Ужасы, Фантастика, Комедия")
+        bot.send_message(message.chat.id, "Введите жанр фильма:\n\nP.s Вводите жанр правильно\n\nДоступные жанры: Драма, Ужасы, Фантастика, Комедия, Романтика")
         bot.register_next_step_handler(message, searchGenre)
     elif message.text == '↩️ Назад в меню':
         welcome(message)
@@ -119,6 +103,12 @@ my_dict = {
         "Описание": "После того, как женщина оставляет портфель в терминале аэропорта, тупой водитель лимузина и его еще более тупой друг отправляются в веселую поездку по пересеченной местности в Аспен, чтобы вернуть его.",
         "Ссылка": "https://www.imdb.com/title/tt0109686/?ref_=ls_t_1",
         "Жанр" : "Комедия"
+    },
+    7: {
+        "Название": "Красавица и чудовище",
+        "Описание": "Принц, обреченный провести свои дни в образе отвратительного монстра, намеревается вернуть себе человечность, завоевав любовь молодой женщины.",
+        "Ссылка": "https://www.imdb.com/title/tt0101414/?ref_=ls_t_5",
+        "Жанр": "Романтика"
     }
 }
 
@@ -132,7 +122,7 @@ def search(message):
         
         if n in my_dict:
             movie = my_dict[n]
-            response = f"Название: {movie['Название']}\nОписание: {movie['Описание']}\nСсылка: {movie['Ссылка']}"
+            response = f"Название: {movie['Название']}\n\nОписание: {movie['Описание']}\n\nСсылка: {movie['Ссылка']}"
             bot.send_message(message.chat.id, response, reply_markup=markup)
         else:
             bot.send_message(message.chat.id, "Фильм не найден. Пожалуйста, попробуйте другой номер.", reply_markup=markup)
@@ -150,7 +140,8 @@ def searchGenre(message):
         'Фантастика': "Фантастика",
         'Драма': "Драма",
         'Ужасы': "Ужасы",
-        'Комедия': "Комедия"
+        'Комедия': "Комедия",
+        'Романтика': "Романтика"
     }
 
     genre_key = message.text.capitalize()  # Приводим текст сообщения к корректному формату
@@ -163,7 +154,7 @@ def searchGenre(message):
         
         for movie in my_dict.values():
             if movie["Жанр"] == genre_name:
-                response += f"- {movie['Название']}: {movie['Описание']}\nСсылка: {movie['Ссылка']}\n"
+                response += f"- {movie['Название']}: {movie['Описание']}\n\nСсылка: {movie['Ссылка']}\n"
                 found = True
         
         # Проверяем, были ли найдены фильмы
@@ -193,10 +184,8 @@ def settings(message):
     markup.row(button1)
     bot.send_message(message.chat.id, 'О проблемах писать -> @jansavitskiy', reply_markup=markup)
 
-def main():
-    create_database()
+# Создаем базу данных при запуске бота
+create_database()
 
-
-
-
+# Запуск бота
 bot.polling(none_stop=True)
