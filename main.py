@@ -2,7 +2,7 @@ import sqlite3
 from telebot import TeleBot, types
 
 # Замените 'YOUR_BOT_TOKEN' на токен вашего бота
-bot = TeleBot('7186982195:AAEPxCDln0bZALc8nPA1haypejAQ3x94VU0')
+bot = TeleBot('YOUR_CODE')
 
 def create_database():
     conn = sqlite3.connect('users.db')
