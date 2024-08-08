@@ -2,7 +2,7 @@ import sqlite3
 from telebot import TeleBot, types
 
 # Замените 'YOUR_BOT_TOKEN' на токен вашего бота
-bot = TeleBot('YOUR_TOKEN')
+bot = TeleBot('7186982195:AAEPxCDln0bZALc8nPA1haypejAQ3x94VU0')
 
 def create_database():
     conn = sqlite3.connect('users.db')
@@ -25,6 +25,8 @@ def add_user(user_id):
 
 answers = "Перепроверь ещё раз свой запрос"  # Сообщение в случае неправильной команды
 
+menu = "Вот вы и в главном меню"
+
 @bot.message_handler(commands=["start"])
 def welcome(message):                       # Функция welcome и главные кнопки меню
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True) # Какая-то фишка для работы кнопок                
@@ -38,6 +40,19 @@ def welcome(message):                       # Функция welcome и глав
     add_user(user_id)
 
     bot.send_message(message.chat.id, f'Привет, {message.from_user.first_name}!\nМеня зовут ФИЛЬМОБОТ и я твой проводник в мир кино и сериалов :)\nДля начала выбери способ поиска фильма в меню ниже: ', reply_markup=markup)
+    
+@bot.message_handler(func=lambda message: message.text == 'Главное меню')
+def return_to_main_menu(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button1 = types.KeyboardButton('Поиск по жанрам')
+    button2 = types.KeyboardButton('Поиск по коду')
+    button3 = types.KeyboardButton('ТГК с фильмами')
+    button5 = types.KeyboardButton('Настройки')
+
+    markup.row(button1, button2, button3)
+    markup.row(button5)  # Главные кнопки меню
+
+    bot.send_message(message.chat.id, 'Вы вернулись в главное меню. Пожалуйста, выберите опцию ниже:', reply_markup=markup)
 
 @bot.message_handler(commands=['users_admin'])
 def list_users(message):
@@ -63,9 +78,10 @@ def info(message):
         bot.send_message(message.chat.id, "Введите жанр фильма:\n\nP.s Вводите жанр правильно\n\nДоступные жанры: Драма, Ужасы, Фантастика, Комедия, Романтика")
         bot.register_next_step_handler(message, searchGenre)
     elif message.text == '↩️ Назад в меню':
-        welcome(message)
+        return_to_main_menu(message)
     else:
         bot.send_message(message.chat.id, answers)
+
 
 my_dict = {
     1: {
